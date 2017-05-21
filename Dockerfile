@@ -17,18 +17,12 @@ RUN apt-get update && apt-get install -y \
     libjpeg62-turbo-dev \
     libpng12-dev \
     git \
-    vim \
+    nano \
     openssh-server \
     supervisor \
     mysql-client \
     ocaml \
     expect \
-    && curl -L https://github.com/bcpierce00/unison/archive/2.48.4.tar.gz | tar zxv -C /tmp && \
-             cd /tmp/unison-2.48.4 && \
-             sed -i -e 's/GLIBC_SUPPORT_INOTIFY 0/GLIBC_SUPPORT_INOTIFY 1/' src/fsmonitor/linux/inotify_stubs.c && \
-             make && \
-             cp src/unison src/unison-fsmonitor /usr/local/bin && \
-             cd /root && rm -rf /tmp/unison-2.48.4 \
     && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
     && docker-php-ext-configure hash --with-mhash \
     && docker-php-ext-install -j$(nproc) mcrypt intl xsl gd zip pdo_mysql opcache soap bcmath json iconv \
@@ -55,8 +49,8 @@ RUN apt-get update && apt-get install -y \
     && useradd -m -d /home/magento2 -s /bin/bash magento2 && adduser magento2 sudo \
     && touch /etc/sudoers.d/privacy \
     && echo "Defaults        lecture = never" >> /etc/sudoers.d/privacy \
-    && mkdir /home/magento2/magento2 && mkdir /var/www/magento2 \
-    && mkdir /home/magento2/state \
+    && mkdir /home/magento2/magento2 \
+    && ln -s /home/magento2/magento2 /var/www/magento2 \
     && curl -sS https://accounts.magento.cloud/cli/installer -o /home/magento2/installer \
     && rm -r /usr/local/etc/php-fpm.d/* \
     && sed -i 's/www-data/magento2/g' /etc/apache2/envvars
@@ -77,14 +71,8 @@ ADD conf/php-fpm-magento2.conf /usr/local/etc/php-fpm.d/php-fpm-magento2.conf
 # apache config
 ADD conf/apache-default.conf /etc/apache2/sites-enabled/apache-default.conf
 
-# unison script
-ADD conf/.unison/magento2.prf /home/magento2/.unison/magento2.prf
-
-ADD conf/unison.sh /usr/local/bin/unison.sh
 ADD conf/entrypoint.sh /usr/local/bin/entrypoint.sh
-ADD conf/check-unison.sh /usr/local/bin/check-unison.sh
-RUN chmod +x /usr/local/bin/unison.sh && chmod +x /usr/local/bin/entrypoint.sh \
-    && chmod +x /usr/local/bin/check-unison.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENV PATH $PATH:/home/magento2/scripts/:/home/magento2/.magento-cloud/bin
 ENV PATH $PATH:/var/www/magento2/bin
@@ -93,22 +81,6 @@ ENV USE_SHARED_WEBROOT 1
 ENV SHARED_CODE_PATH /var/www/magento2
 ENV WEBROOT_PATH /var/www/magento2
 ENV MAGENTO_ENABLE_SYNC_MARKER 0
-
-RUN mkdir /windows \
- && cd /windows \
- && curl -L -o unison-windows.zip https://www.irif.fr/~vouillon/unison/unison%202.48.3.zip \
- && unzip unison-windows.zip \
- && rm unison-windows.zip \
- && mv 'unison 2.48.3 text.exe' unison.exe \
- && rm 'unison 2.48.3 GTK.exe' \
- && chown -R magento2:magento2 .
-
-RUN mkdir /mac-osx \
- && cd /mac-osx \
- && curl -L -o unison-mac-osx.zip http://unison-binaries.inria.fr/files/Unison-OS-X-2.48.15.zip \
- && unzip unison-mac-osx.zip \
- && rm unison-mac-osx.zip \
- && chown -R magento2:magento2 .
 
 # Initial scripts
 COPY scripts/ /home/magento2/scripts/
